@@ -45,11 +45,12 @@ func getTasks(w http.ResponseWriter, r *http.Request) {
 	resp, err := json.Marshal(tasks)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(resp)
+	_, _ = w.Write(resp)
 }
 
 func addTask(w http.ResponseWriter, r *http.Request) {
@@ -59,10 +60,12 @@ func addTask(w http.ResponseWriter, r *http.Request) {
 	_, err := buf.ReadFrom(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	if err = json.Unmarshal(buf.Bytes(), &task); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	_, ok := tasks[task.ID]
@@ -72,10 +75,14 @@ func addTask(w http.ResponseWriter, r *http.Request) {
 		return
 	} else {
 		tasks[task.ID] = task
-		resp, _ := json.Marshal(tasks[task.ID])
+		resp, err := json.Marshal(tasks[task.ID])
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		w.Write(resp)
+		_, _ = w.Write(resp)
 	}
 }
 
@@ -96,7 +103,7 @@ func getTask(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(resp)
+	_, _ = w.Write(resp)
 }
 
 func deleteTask(w http.ResponseWriter, r *http.Request) {
@@ -112,14 +119,14 @@ func deleteTask(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Задача удалена"))
+	_, _ = w.Write([]byte("Задача удалена"))
 }
 func main() {
 	r := chi.NewRouter()
 	r.Get("/tasks", getTasks)
 	r.Post("/tasks", addTask)
-	r.Get("/task/{id}", getTask)
-	r.Delete("/task/{id}", deleteTask)
+	r.Get("/tasks/{id}", getTask)
+	r.Delete("/tasks/{id}", deleteTask)
 
 	if err := http.ListenAndServe(":8080", r); err != nil {
 		fmt.Printf("Ошибка при запуске сервера: %s", err.Error())
